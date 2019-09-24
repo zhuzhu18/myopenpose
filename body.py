@@ -28,7 +28,8 @@ class Body:
         thre1 = 0.1
         thre2 = 0.05
         h, w = oriImg.shape[:-1]
-        scale_search = [0.5, 1, 2, 2.5]
+        # scale_search = [0.5, 1, 2, 2.5]
+        scale_search = [2]       # 多尺度综合
         multiplier = [base_size*scale/h for scale in scale_search]
         pafmap_avg = np.zeros((h, w, 38))
         heatmap_avg = np.zeros((h, w, 19))
@@ -142,9 +143,9 @@ class Body:
 
                     elif found == 2:            # 如果出现过两次
                         j1, j2 = subset_idx
-                        membership = (subset[j1][:2] > 0).astype('int') + (subset[j2][:2] > 0).astype('int')
-                        if len(np.nonzero(membership == 2)[0]) > 0:
-                            subset[j1][:-2] += (subset[j2][:2] + 1)     # +1是为了消除subset中的-1
+                        membership = (subset[j1][:-2] > 0).astype('int') + (subset[j2][:-2] > 0).astype('int')
+                        if len(np.nonzero(membership == 2)[0]) == 0:
+                            subset[j1][:-2] += (subset[j2][:-2] + 1)     # +1是为了消除subset中的-1
                             subset[j1][-2] += connection_all[k][i][2] + subset[j2][-2]
                             subset[j1][-1] += subset[j2][-1]
                             subset = np.delete(subset, j2, 0)
@@ -152,14 +153,16 @@ class Body:
                             subset[j1][indexB] = partBs[i]
                             subset[j1][-1] += 1
                             subset[j1][-2] += candidate[partBs[i].astype('int'), 2] + connection_all[k][i][2]
-                    elif found == 0:
+                    elif found == 0 and k < 17:
                         row = -1 * np.ones(20)      # 创建一个新的人
                         row[indexA] = partAs[i]
                         row[indexB] = partBs[i]
                         row[-2] = connection_all[k][i, 2] + candidate[[partAs[i].astype('int'), partBs[i].astype('int')], 2].sum()
                         subset = np.vstack([subset, row])
+        deleteIdx = []
         for i in range(len(subset)):
             if subset[i][-1] < 4 or subset[i][-2] / subset[i][-1] < 0.4:
-                subset = np.delete(subset, i, 0)
+                deleteIdx.append(i)
+        subset = np.delete(subset, deleteIdx, axis=0)
 
         return candidate, subset
